@@ -238,6 +238,44 @@ export function registerRoutes(httpServer: Server, app: Express) {
     res.json(item);
   });
 
+  // --- EPISODE ROUTES (podcasts) ---
+  app.get("/api/shelf/:id/episodes", (req, res) => {
+    const episodes = storage.getEpisodesByPodcast(Number(req.params.id));
+    res.json(episodes);
+  });
+
+  app.post("/api/shelf/:id/episodes", requireAuth, (req, res) => {
+    const item = storage.getShelfItemById(Number(req.params.id));
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    if (item.userId !== (req.user as any).id) return res.status(403).json({ error: "Not your item" });
+    try {
+      const episode = storage.createEpisode({
+        shelfItemId: item.id,
+        userId: (req.user as any).id,
+        title: req.body.title,
+        description: req.body.description || "",
+        episodeNumber: req.body.episodeNumber || "",
+        listened: req.body.listened ?? false,
+        rating: req.body.rating ?? 0,
+        notes: req.body.notes || "",
+      });
+      res.json(episode);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/episodes/:id", requireAuth, (req, res) => {
+    const updated = storage.updateEpisode(Number(req.params.id), req.body);
+    if (!updated) return res.status(404).json({ error: "Episode not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/episodes/:id", requireAuth, (req, res) => {
+    storage.deleteEpisode(Number(req.params.id));
+    res.json({ ok: true });
+  });
+
   // Book search via Open Library
   app.get("/api/search/books", async (req, res) => {
     const q = String(req.query.q || "").trim();

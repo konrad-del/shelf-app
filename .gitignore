@@ -1,4 +1,5 @@
 node_modules/
 dist/
+shelf.db
 *.db
 .env

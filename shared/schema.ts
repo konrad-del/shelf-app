@@ -51,6 +51,24 @@ export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, c
 export type InsertFollow = z.infer<typeof insertFollowSchema>;
 export type Follow = typeof follows.$inferSelect;
 
+// Podcast episodes
+export const podcastEpisodes = sqliteTable("podcast_episodes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  shelfItemId: integer("shelf_item_id").notNull(), // parent podcast
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").default(""),
+  episodeNumber: text("episode_number").default(""),
+  listened: integer("listened", { mode: "boolean" }).notNull().default(false),
+  rating: integer("rating").default(0),
+  notes: text("notes").default(""),
+  addedAt: integer("added_at").notNull().$defaultFn(() => Date.now()),
+});
+
+export const insertPodcastEpisodeSchema = createInsertSchema(podcastEpisodes).omit({ id: true, addedAt: true });
+export type InsertPodcastEpisode = z.infer<typeof insertPodcastEpisodeSchema>;
+export type PodcastEpisode = typeof podcastEpisodes.$inferSelect;
+
 // Recommendations (user recommends item to another user)
 export const recommendations = sqliteTable("recommendations", {
   id: integer("id").primaryKey({ autoIncrement: true }),

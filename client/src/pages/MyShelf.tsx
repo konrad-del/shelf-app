@@ -1,39 +1,35 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth";
+import { useShelfType } from "../lib/shelfType";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 import { ShelfGrid } from "../components/ShelfGrid";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
-import { BookOpen, Mic2, Film, Plus, Share2 } from "lucide-react";
+import { Plus, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { ShelfItem } from "@shared/schema";
-
-const TYPES = [
-  { value: "all", label: "All", icon: null },
-  { value: "book", label: "Books", icon: BookOpen },
-  { value: "podcast", label: "Podcasts", icon: Mic2 },
-  { value: "movie", label: "Movies", icon: Film },
-];
 
 const STATUSES = ["all", "wishlist", "owned", "completed"] as const;
 const STATUS_LABELS: Record<string, string> = {
   all: "All", wishlist: "Wishlist", owned: "Owned", completed: "Completed",
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  book: "Books", podcast: "Podcasts", movie: "Movies",
+};
+
 export default function MyShelfPage() {
   const { user } = useAuth();
+  const { activeType } = useShelfType();
   const { toast } = useToast();
-  const [activeType, setActiveType] = useState("all");
   const [activeStatus, setActiveStatus] = useState("all");
 
   const { data: items, isLoading } = useQuery<ShelfItem[]>({
     queryKey: ["/api/shelf", user?.username, activeType],
     queryFn: async () => {
       if (!user) return [];
-      const params = activeType !== "all" ? `?type=${activeType}` : "";
-      const r = await apiRequest("GET", `/api/shelf/${user.username}${params}`);
+      const r = await apiRequest("GET", `/api/shelf/${user.username}?type=${activeType}`);
       return r.json();
     },
     enabled: !!user,
@@ -56,8 +52,8 @@ export default function MyShelfPage() {
     completed: items?.filter(i => i.status === "completed").length || 0,
   };
 
-  const shareUrl = `${window.location.origin}${window.location.pathname}#/u/${user.username}`;
   const copyLink = () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/u/${user.username}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       toast({ title: "Link copied!", description: "Share your profile with friends." });
     });
@@ -66,11 +62,11 @@ export default function MyShelfPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8 gap-4">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-xl font-bold text-foreground">My Shelf</h1>
+          <h1 className="text-xl font-bold text-foreground">My {TYPE_LABELS[activeType]}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {stats.total} {stats.total === 1 ? "item" : "items"} across all your shelves
+            {stats.total} {stats.total === 1 ? "item" : "items"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -88,7 +84,7 @@ export default function MyShelfPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total", value: stats.total, color: "" },
           { label: "Wishlist", value: stats.wishlist, color: "text-amber-400" },
@@ -101,18 +97,6 @@ export default function MyShelfPage() {
           </div>
         ))}
       </div>
-
-      {/* Type tabs */}
-      <Tabs value={activeType} onValueChange={setActiveType} className="mb-4">
-        <TabsList className="bg-muted/50">
-          {TYPES.map(t => (
-            <TabsTrigger key={t.value} value={t.value} className="gap-1.5 text-xs" data-testid={`tab-type-${t.value}`}>
-              {t.icon && <t.icon className="w-3.5 h-3.5" />}
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
 
       {/* Status filter */}
       <div className="flex items-center gap-1.5 mb-6 flex-wrap">
@@ -134,7 +118,7 @@ export default function MyShelfPage() {
       <ShelfGrid
         items={filtered}
         loading={isLoading}
-        emptyMessage={`No ${activeStatus === "all" ? "" : activeStatus + " "}${activeType === "all" ? "items" : activeType + "s"} yet.`}
+        emptyMessage={`No ${activeStatus === "all" ? "" : activeStatus + " "}${TYPE_LABELS[activeType].toLowerCase()} yet.`}
         showAddButton
       />
     </div>

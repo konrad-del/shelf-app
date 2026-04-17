@@ -2,6 +2,7 @@ import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "./lib/auth";
+import { ShelfTypeProvider } from "./lib/shelfType";
 import HomePage from "./pages/Home";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
@@ -27,24 +28,26 @@ export default function App() {
 
   return (
     <Router hook={useHashLocation}>
-      <div className="min-h-screen bg-background text-foreground">
-        <Navbar />
-        <main>
-          <Switch>
-            <Route path="/" component={HomePage} />
-            <Route path="/login" component={LoginPage} />
-            <Route path="/register" component={RegisterPage} />
-            <Route path="/shelf" component={MyShelfPage} />
-            <Route path="/shelf/add" component={AddItemPage} />
-            <Route path="/shelf/item/:id" component={ItemDetailPage} />
-            <Route path="/recommendations" component={RecommendationsPage} />
-            <Route path="/discover" component={DiscoverPage} />
-            <Route path="/u/:username" component={ProfilePage} />
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-        <Toaster />
-      </div>
+      <ShelfTypeProvider>
+        <div className="min-h-screen bg-background text-foreground">
+          <Navbar />
+          <main>
+            <Switch>
+              <Route path="/" component={HomePage} />
+              <Route path="/login" component={LoginPage} />
+              <Route path="/register" component={RegisterPage} />
+              <Route path="/shelf" component={MyShelfPage} />
+              <Route path="/shelf/add" component={AddItemPage} />
+              <Route path="/shelf/item/:id" component={ItemDetailPage} />
+              <Route path="/recommendations" component={RecommendationsPage} />
+              <Route path="/discover" component={DiscoverPage} />
+              <Route path="/u/:username" component={ProfilePage} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+          <Toaster />
+        </div>
+      </ShelfTypeProvider>
     </Router>
   );
 }

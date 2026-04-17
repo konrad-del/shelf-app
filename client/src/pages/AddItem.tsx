@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
+import { useShelfType, type ShelfType } from "../lib/shelfType";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { BookOpen, Mic2, Film, Search, Plus, ArrowLeft, Star } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
-type ItemType = "book" | "podcast" | "movie";
+type ItemType = ShelfType;
 
 interface SearchResult {
   externalId: string;
@@ -30,7 +31,8 @@ export default function AddItemPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const [type, setType] = useState<ItemType>("book");
+  const { activeType, setActiveType } = useShelfType();
+  const [type, setType] = useState<ItemType>(activeType);
   const [query, setQuery] = useState("");
   const [searchTriggered, setSearchTriggered] = useState("");
   const [selected, setSelected] = useState<SearchResult | null>(null);
@@ -95,7 +97,7 @@ export default function AddItemPage() {
       <p className="text-muted-foreground text-sm mb-6">Search for a book, podcast, or movie to add.</p>
 
       {/* Type selector */}
-      <Tabs value={type} onValueChange={(v) => { setType(v as ItemType); setSearchTriggered(""); setSelected(null); }} className="mb-5">
+      <Tabs value={type} onValueChange={(v) => { setType(v as ItemType); setActiveType(v as ItemType); setSearchTriggered(""); setSelected(null); }} className="mb-5">
         <TabsList className="bg-muted/50">
           <TabsTrigger value="book" className="gap-1.5" data-testid="tab-book">
             <BookOpen className="w-4 h-4" /> Books

@@ -2,11 +2,12 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { eq, and, desc, like, or } from "drizzle-orm";
 import {
-  users, shelfItems, follows, recommendations,
+  users, shelfItems, follows, recommendations, podcastEpisodes,
   type User, type InsertUser,
   type ShelfItem, type InsertShelfItem,
   type Follow, type InsertFollow,
   type Recommendation, type InsertRecommendation,
+  type PodcastEpisode, type InsertPodcastEpisode,
 } from "@shared/schema";
 
 const sqlite = new Database("shelf.db");
@@ -46,6 +47,18 @@ sqlite.exec(`
     created_at INTEGER NOT NULL,
     UNIQUE(follower_id, following_id)
   );
+  CREATE TABLE IF NOT EXISTS podcast_episodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shelf_item_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    episode_number TEXT DEFAULT '',
+    listened INTEGER NOT NULL DEFAULT 0,
+    rating INTEGER DEFAULT 0,
+    notes TEXT DEFAULT '',
+    added_at INTEGER NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS recommendations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     from_user_id INTEGER NOT NULL,
@@ -78,6 +91,12 @@ export interface IStorage {
   isFollowing(followerId: number, followingId: number): boolean;
   getFollowers(userId: number): User[];
   getFollowing(userId: number): User[];
+
+  // Episodes
+  createEpisode(data: InsertPodcastEpisode): PodcastEpisode;
+  getEpisodesByPodcast(shelfItemId: number): PodcastEpisode[];
+  updateEpisode(id: number, data: Partial<InsertPodcastEpisode>): PodcastEpisode | undefined;
+  deleteEpisode(id: number): void;
 
   // Recommendations
   createRecommendation(data: InsertRecommendation): Recommendation;
@@ -198,6 +217,26 @@ export class SqliteStorage implements IStorage {
       const item = db.select().from(shelfItems).where(eq(shelfItems.id, r.shelfItemId)).get()!;
       return { ...r, toUser, item };
     }).filter(r => r.toUser && r.item);
+  }
+
+  createEpisode(data: InsertPodcastEpisode): PodcastEpisode {
+    const now = Date.now();
+    return db.insert(podcastEpisodes).values({ ...data, addedAt: now }).returning().get()!;
+  }
+
+  getEpisodesByPodcast(shelfItemId: number): PodcastEpisode[] {
+    return db.select().from(podcastEpisodes)
+      .where(eq(podcastEpisodes.shelfItemId, shelfItemId))
+      .orderBy(desc(podcastEpisodes.addedAt))
+      .all();
+  }
+
+  updateEpisode(id: number, data: Partial<InsertPodcastEpisode>): PodcastEpisode | undefined {
+    return db.update(podcastEpisodes).set(data).where(eq(podcastEpisodes.id, id)).returning().get();
+  }
+
+  deleteEpisode(id: number): void {
+    db.delete(podcastEpisodes).where(eq(podcastEpisodes.id, id)).run();
   }
 }
 

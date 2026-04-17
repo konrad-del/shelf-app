@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Trash2, Star, BookOpen, Mic2, Film, Share2, Send } from "lucide-react";
+import { EpisodesPanel } from "../components/EpisodesPanel";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { ShelfItem } from "@shared/schema";
@@ -263,6 +264,11 @@ export default function ItemDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Episodes panel — only for podcasts */}
+      {item.type === "podcast" && (
+        <EpisodesPanel podcastId={item.id} isOwner={isOwner} />
+      )}
 
       {/* Notes section */}
       {isOwner && (
