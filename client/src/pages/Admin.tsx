@@ -84,7 +84,7 @@ export default function AdminPage() {
         </div>
         <Badge variant="outline" className="text-xs gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-          konrad only
+          admin only
         </Badge>
       </div>
 

@@ -143,7 +143,7 @@ export function Navbar() {
                       Recommendations
                     </Link>
                   </DropdownMenuItem>
-                  {user.username === "konrad" && (
+                  {["konrad", "himbeerrosa"].includes(user.username) && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin">
                         <ShieldCheck className="w-4 h-4 mr-2" />

@@ -231,10 +231,11 @@ export function registerRoutes(httpServer: Server, app: Express) {
     })));
   });
 
-  // Admin: all users (konrad only)
+  // Admin: all users (konrad + himbeerrosa)
+  const ADMINS = ["konrad", "himbeerrosa"];
   app.get("/api/admin/users", requireAuth, (req, res) => {
     const me = req.user as any;
-    if (me.username !== "konrad") return res.status(403).json({ error: "Forbidden" });
+    if (!ADMINS.includes(me.username)) return res.status(403).json({ error: "Forbidden" });
     const users = storage.getAllUsersAdmin();
     res.json(users);
   });
