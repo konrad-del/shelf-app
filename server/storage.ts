@@ -10,7 +10,7 @@ import {
   type PodcastEpisode, type InsertPodcastEpisode,
 } from "@shared/schema";
 
-const sqlite = new Database("shelf.db");
+const sqlite = new Database("/data/shelf.db");
 const db = drizzle(sqlite);
 
 // Run migrations
