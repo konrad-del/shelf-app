@@ -231,6 +231,14 @@ export function registerRoutes(httpServer: Server, app: Express) {
     })));
   });
 
+  // Admin: all users (konrad only)
+  app.get("/api/admin/users", requireAuth, (req, res) => {
+    const me = req.user as any;
+    if (me.username !== "konrad") return res.status(403).json({ error: "Forbidden" });
+    const users = storage.getAllUsersAdmin();
+    res.json(users);
+  });
+
   // Feed: items from people you follow
   app.get("/api/feed", requireAuth, (req, res) => {
     const me = req.user as any;

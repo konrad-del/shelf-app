@@ -109,6 +109,9 @@ export interface IStorage {
 
   // Feed
   getFollowingFeed(userId: number, limit?: number): (ShelfItem & { user: Omit<User, 'passwordHash'> })[]; 
+
+  // Admin
+  getAllUsersAdmin(): { id: number; username: string; email: string; displayName: string; bio: string; itemCount: number; followerCount: number; followingCount: number }[];
 }
 
 export class SqliteStorage implements IStorage {
@@ -244,6 +247,16 @@ export class SqliteStorage implements IStorage {
 
   deleteEpisode(id: number): void {
     db.delete(podcastEpisodes).where(eq(podcastEpisodes.id, id)).run();
+  }
+
+  getAllUsersAdmin() {
+    const allUsers = db.select().from(users).orderBy(desc(users.id)).all();
+    return allUsers.map(u => {
+      const itemCount = db.select().from(shelfItems).where(eq(shelfItems.userId, u.id)).all().length;
+      const followerCount = db.select().from(follows).where(eq(follows.followingId, u.id)).all().length;
+      const followingCount = db.select().from(follows).where(eq(follows.followerId, u.id)).all().length;
+      return { id: u.id, username: u.username, email: u.email, displayName: u.displayName, bio: u.bio || "", itemCount, followerCount, followingCount };
+    });
   }
 
   getFollowingFeed(userId: number, limit = 30): (ShelfItem & { user: Omit<User, 'passwordHash'> })[] {

@@ -12,6 +12,7 @@ import ItemDetailPage from "./pages/ItemDetail";
 import AddItemPage from "./pages/AddItem";
 import RecommendationsPage from "./pages/Recommendations";
 import DiscoverPage from "./pages/Discover";
+import AdminPage from "./pages/Admin";
 import NotFound from "./pages/not-found";
 import { Navbar } from "./components/Navbar";
 
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="/shelf/item/:id" component={ItemDetailPage} />
               <Route path="/recommendations" component={RecommendationsPage} />
               <Route path="/discover" component={DiscoverPage} />
+              <Route path="/admin" component={AdminPage} />
               <Route path="/u/:username" component={ProfilePage} />
               <Route component={NotFound} />
             </Switch>

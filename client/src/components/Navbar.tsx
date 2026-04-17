@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BookOpen, Mic2, Film, Plus, Bell, Compass, LogOut, User, ChevronDown } from "lucide-react";
+import { BookOpen, Mic2, Film, Plus, Bell, Compass, LogOut, User, ChevronDown, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 
@@ -143,6 +143,14 @@ export function Navbar() {
                       Recommendations
                     </Link>
                   </DropdownMenuItem>
+                  {user.username === "konrad" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <ShieldCheck className="w-4 h-4 mr-2" />
+                        Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} data-testid="button-logout" className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
