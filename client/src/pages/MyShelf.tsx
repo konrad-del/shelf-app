@@ -9,11 +9,7 @@ import { Link } from "wouter";
 import { Plus, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { ShelfItem } from "@shared/schema";
-
-const STATUSES = ["all", "wishlist", "owned", "completed"] as const;
-const STATUS_LABELS: Record<string, string> = {
-  all: "All", wishlist: "Wishlist", owned: "Owned", completed: "Completed",
-};
+import { getStatusesForType } from "../lib/shelfConstants";
 
 const TYPE_LABELS: Record<string, string> = {
   book: "Books", podcast: "Podcasts", movie: "Movies",
@@ -24,6 +20,7 @@ export default function MyShelfPage() {
   const { activeType } = useShelfType();
   const { toast } = useToast();
   const [activeStatus, setActiveStatus] = useState("all");
+  const statuses = getStatusesForType(activeType);
 
   const { data: items, isLoading } = useQuery<ShelfItem[]>({
     queryKey: ["/api/shelf", user?.username, activeType],
@@ -47,9 +44,9 @@ export default function MyShelfPage() {
 
   const stats = {
     total: items?.length || 0,
-    wishlist: items?.filter(i => i.status === "wishlist").length || 0,
-    owned: items?.filter(i => i.status === "owned").length || 0,
-    completed: items?.filter(i => i.status === "completed").length || 0,
+    s0: items?.filter(i => i.status === statuses[0]?.value).length || 0,
+    s1: items?.filter(i => i.status === statuses[1]?.value).length || 0,
+    s2: items?.filter(i => i.status === statuses[2]?.value).length || 0,
   };
 
   const copyLink = () => {
@@ -87,29 +84,34 @@ export default function MyShelfPage() {
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total", value: stats.total, color: "" },
-          { label: "Wishlist", value: stats.wishlist, color: "text-amber-400" },
-          { label: "Owned", value: stats.owned, color: "text-emerald-400" },
-          { label: "Completed", value: stats.completed, color: "text-sky-400" },
+          { label: statuses[0]?.label, value: stats.s0, color: "text-amber-400" },
+          { label: statuses[1]?.label, value: stats.s1, color: "text-emerald-400" },
+          { label: statuses[2]?.label, value: stats.s2, color: "text-sky-400" },
         ].map(s => (
-          <div key={s.label} className="p-3 rounded-lg bg-card border border-border text-center" data-testid={`stat-${s.label.toLowerCase()}`}>
+          <div key={s.label} className="p-3 rounded-lg bg-card border border-border text-center">
             <div className={`text-xl font-bold ${s.color || "text-foreground"}`}>{s.value}</div>
-            <div className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">{s.label}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5 leading-tight">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Status filter */}
       <div className="flex items-center gap-1.5 mb-6 flex-wrap">
-        {STATUSES.map(s => (
+        <Button
+          variant={activeStatus === "all" ? "default" : "outline"}
+          size="sm" onClick={() => setActiveStatus("all")}
+          className="text-xs h-7"
+        >All</Button>
+        {statuses.map(s => (
           <Button
-            key={s}
-            variant={activeStatus === s ? "default" : "outline"}
+            key={s.value}
+            variant={activeStatus === s.value ? "default" : "outline"}
             size="sm"
-            onClick={() => setActiveStatus(s)}
+            onClick={() => setActiveStatus(s.value)}
             className="text-xs h-7"
-            data-testid={`filter-status-${s}`}
+            data-testid={`filter-status-${s.value}`}
           >
-            {STATUS_LABELS[s]}
+            {s.label}
           </Button>
         ))}
       </div>

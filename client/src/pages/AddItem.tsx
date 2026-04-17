@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Mic2, Film, Search, Plus, ArrowLeft, Star } from "lucide-react";
+import { BookOpen, Mic2, Film, Search, Plus, ArrowLeft } from "lucide-react";
+import { getStatusesForType, defaultStatusForType } from "../lib/shelfConstants";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
@@ -35,8 +36,7 @@ export default function AddItemPage() {
   const [query, setQuery] = useState("");
   const [searchTriggered, setSearchTriggered] = useState("");
   const [selected, setSelected] = useState<SearchResult | null>(null);
-  const [status, setStatus] = useState("wishlist");
-  const [rating, setRating] = useState(0);
+  const [status, setStatus] = useState(() => defaultStatusForType(activeType));
   const [notes, setNotes] = useState("");
 
   const { data: results, isLoading: searching } = useQuery<SearchResult[]>({
@@ -61,7 +61,6 @@ export default function AddItemPage() {
         year: selected.year,
         genre: selected.genre,
         status,
-        rating,
         notes,
         userId: user?.id,
       });
@@ -102,7 +101,7 @@ export default function AddItemPage() {
             key={v}
             type="button"
             data-testid={`tab-${v}`}
-            onClick={() => { setType(v); setActiveType(v); setSearchTriggered(""); setSelected(null); setQuery(""); }}
+            onClick={() => { setType(v); setActiveType(v); setSearchTriggered(""); setSelected(null); setQuery(""); setStatus(defaultStatusForType(v)); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
               type === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
@@ -203,27 +202,11 @@ export default function AddItemPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="wishlist">🟡 Wishlist</SelectItem>
-                <SelectItem value="owned">🟢 Owned</SelectItem>
-                <SelectItem value="completed">🔵 Completed</SelectItem>
+                {getStatusesForType(type).map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Rating (optional)</Label>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map(n => (
-                <button key={n} type="button" onClick={() => setRating(rating === n ? 0 : n)}
-                  className="p-0.5" data-testid={`star-${n}`}>
-                  <Star className={`w-6 h-6 transition-colors ${n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
-                </button>
-              ))}
-              {rating > 0 && (
-                <button type="button" onClick={() => setRating(0)}
-                  className="text-xs text-muted-foreground ml-2">Clear</button>
-              )}
-            </div>
           </div>
 
           <div className="space-y-1.5">

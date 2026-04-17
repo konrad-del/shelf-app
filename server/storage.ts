@@ -71,6 +71,7 @@ sqlite.exec(`
 
 // Migrations for columns added after initial schema
 try { sqlite.exec(`ALTER TABLE shelf_items ADD COLUMN public_notes TEXT DEFAULT ''`); } catch {}
+try { sqlite.exec(`ALTER TABLE shelf_items ADD COLUMN tier TEXT DEFAULT ''`); } catch {}
 
 export interface IStorage {
   // Users

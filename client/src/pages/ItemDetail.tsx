@@ -8,15 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Trash2, Star, BookOpen, Mic2, Film, Share2, Send } from "lucide-react";
+import { ArrowLeft, Trash2, BookOpen, Mic2, Film, Send, LayoutGrid } from "lucide-react";
 import { EpisodesPanel } from "../components/EpisodesPanel";
+import { TierBoard } from "../components/TierBoard";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { ShelfItem } from "@shared/schema";
+import { getStatusesForType, getStatusLabel, TIERS, getTier } from "../lib/shelfConstants";
 
 const TYPE_ICONS = { book: BookOpen, podcast: Mic2, movie: Film };
-const STATUS_COLORS = { wishlist: "text-amber-400", owned: "text-emerald-400", completed: "text-sky-400" };
-const STATUS_LABELS = { wishlist: "Wishlist", owned: "Owned", completed: "Completed" };
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,17 +31,26 @@ export default function ItemDetailPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [publicNotes, setPublicNotes] = useState("");
   const [editingPublicNotes, setEditingPublicNotes] = useState(false);
+  const [tierOpen, setTierOpen] = useState(false);
 
   const { data: item, isLoading } = useQuery<ShelfItem>({
     queryKey: ["/api/shelf/item", id],
     queryFn: async () => {
-      // Get owner from item - we fetch via shelf endpoint
-      // We need to fetch the item directly - we use a workaround by getting all items
-      // Actually, we'll need to get by user — let's use a direct route
       const r = await apiRequest("GET", `/api/shelf-item/${id}`);
       if (!r.ok) throw new Error("Not found");
       return r.json();
     },
+  });
+
+  // Fetch all items of same type + user for the tier board
+  const { data: allItems } = useQuery<ShelfItem[]>({
+    queryKey: ["/api/shelf", user?.username, item?.type],
+    queryFn: async () => {
+      if (!user || !item) return [];
+      const r = await apiRequest("GET", `/api/shelf/${user.username}?type=${item.type}`);
+      return r.json();
+    },
+    enabled: !!user && !!item && tierOpen,
   });
 
   const updateMutation = useMutation({
@@ -109,6 +118,8 @@ export default function ItemDetailPage() {
 
   const TypeIcon = TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] || BookOpen;
   const isOwner = user?.id === item.userId;
+  const statuses = getStatusesForType(item.type);
+  const currentTier = getTier((item as any).tier);
 
   const saveNotes = () => {
     updateMutation.mutate({ notes });
@@ -120,6 +131,19 @@ export default function ItemDetailPage() {
     updateMutation.mutate({ publicNotes });
     setEditingPublicNotes(false);
     toast({ title: "Public note saved" });
+  };
+
+  const handleTierChange = (itemId: number, tier: string | null) => {
+    // Update the specific item — if it's this item, update directly
+    if (itemId === item.id) {
+      updateMutation.mutate({ tier: tier ?? "" });
+    } else {
+      // Update another item in the tier board
+      apiRequest("PATCH", `/api/shelf/${itemId}`, { tier: tier ?? "" }).then(() => {
+        qc.invalidateQueries({ queryKey: ["/api/shelf"] });
+        qc.invalidateQueries({ queryKey: ["/api/shelf/item", String(itemId)] });
+      });
+    }
   };
 
   return (
@@ -164,42 +188,86 @@ export default function ItemDetailPage() {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Status</Label>
               <Select value={item.status} onValueChange={(v) => updateMutation.mutate({ status: v })}>
-                <SelectTrigger className="w-44" data-testid="select-status">
+                <SelectTrigger className="w-48" data-testid="select-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="wishlist">🟡 Wishlist</SelectItem>
-                  <SelectItem value="owned">🟢 Owned</SelectItem>
-                  <SelectItem value="completed">🔵 Completed</SelectItem>
+                  {statuses.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           ) : (
             <div>
-              <span className={`font-medium ${STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] || ""}`}>
-                {STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] || item.status}
+              <span className="font-medium text-muted-foreground">
+                {getStatusLabel(item.type, item.status)}
               </span>
             </div>
           )}
 
-          {/* Rating */}
-          {isOwner && (
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Rating</Label>
-              <div className="flex items-center gap-0.5">
-                {[1, 2, 3, 4, 5].map(n => (
-                  <button key={n} type="button"
-                    onClick={() => updateMutation.mutate({ rating: item.rating === n ? 0 : n })}
-                    data-testid={`star-${n}`}>
-                    <Star className={`w-5 h-5 transition-colors ${n <= (item.rating || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+          {/* Tier */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Tier</Label>
+            {isOwner ? (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {TIERS.map(t => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => updateMutation.mutate({ tier: (item as any).tier === t.value ? "" : t.value })}
+                    title={t.label}
+                    className={`w-9 h-9 rounded-lg font-black text-sm border transition-all ${
+                      (item as any).tier === t.value
+                        ? `${t.bg} ${t.text} ${t.border} scale-110 shadow-md`
+                        : `bg-muted/30 text-muted-foreground border-border hover:${t.bg} hover:${t.text}`
+                    }`}
+                    data-testid={`tier-btn-${t.value}`}
+                  >
+                    {t.value}
                   </button>
                 ))}
+                {(item as any).tier && (
+                  <span className={`text-xs ml-1 ${currentTier?.text}`}>{currentTier?.label}</span>
+                )}
               </div>
-            </div>
+            ) : (item as any).tier ? (
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${currentTier?.bg} ${currentTier?.border}`}>
+                <span className={`font-black text-lg ${currentTier?.text}`}>{(item as any).tier}</span>
+                <span className={`text-xs ${currentTier?.text}`}>{currentTier?.label.split("—")[1]?.trim()}</span>
+              </div>
+            ) : (
+              <span className="text-sm text-muted-foreground italic">Not yet ranked</span>
+            )}
+          </div>
+
+          {/* Tier board button */}
+          {isOwner && (
+            <Dialog open={tierOpen} onOpenChange={setTierOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 w-fit" data-testid="button-tier-board">
+                  <LayoutGrid className="w-4 h-4" />
+                  View tier board
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    Tier Board — {item.type === "book" ? "Books" : item.type === "movie" ? "Movies" : "Podcasts"}
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-xs text-muted-foreground -mt-2 mb-4">Hover an unranked item to assign it a tier. Click × to remove from a tier.</p>
+                <TierBoard
+                  items={allItems ?? []}
+                  onTierChange={handleTierChange}
+                  isOwner={isOwner}
+                />
+              </DialogContent>
+            </Dialog>
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             {user && !isOwner && (
               <Dialog open={recOpen} onOpenChange={setRecOpen}>
                 <DialogTrigger asChild>
@@ -209,22 +277,17 @@ export default function ItemDetailPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Send recommendation</DialogTitle>
-                  </DialogHeader>
+                  <DialogHeader><DialogTitle>Send recommendation</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
                       <Label>Recipient username</Label>
-                      <Input placeholder="username" value={recommendTo} onChange={e => setRecommendTo(e.target.value)}
-                        data-testid="input-recommend-to" />
+                      <Input placeholder="username" value={recommendTo} onChange={e => setRecommendTo(e.target.value)} data-testid="input-recommend-to" />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Message (optional)</Label>
-                      <Input placeholder="Why they'd love it…" value={recMessage} onChange={e => setRecMessage(e.target.value)}
-                        data-testid="input-rec-message" />
+                      <Input placeholder="Why they'd love it…" value={recMessage} onChange={e => setRecMessage(e.target.value)} data-testid="input-rec-message" />
                     </div>
-                    <Button onClick={() => recommendMutation.mutate()} disabled={!recommendTo.trim() || recommendMutation.isPending}
-                      className="w-full" data-testid="button-send-rec">
+                    <Button onClick={() => recommendMutation.mutate()} disabled={!recommendTo.trim() || recommendMutation.isPending} className="w-full" data-testid="button-send-rec">
                       {recommendMutation.isPending ? "Sending…" : "Send"}
                     </Button>
                   </div>
@@ -240,21 +303,17 @@ export default function ItemDetailPage() {
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Recommend to someone</DialogTitle>
-                  </DialogHeader>
+                  <DialogHeader><DialogTitle>Recommend to someone</DialogTitle></DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
                       <Label>Recipient username</Label>
-                      <Input placeholder="username" value={recommendTo} onChange={e => setRecommendTo(e.target.value)}
-                        data-testid="input-recommend-to" />
+                      <Input placeholder="username" value={recommendTo} onChange={e => setRecommendTo(e.target.value)} data-testid="input-recommend-to" />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Message (optional)</Label>
                       <Input placeholder="Why they'd love it…" value={recMessage} onChange={e => setRecMessage(e.target.value)} />
                     </div>
-                    <Button onClick={() => recommendMutation.mutate()} disabled={!recommendTo.trim() || recommendMutation.isPending}
-                      className="w-full">
+                    <Button onClick={() => recommendMutation.mutate()} disabled={!recommendTo.trim() || recommendMutation.isPending} className="w-full">
                       {recommendMutation.isPending ? "Sending…" : "Send recommendation"}
                     </Button>
                   </div>
@@ -278,7 +337,7 @@ export default function ItemDetailPage() {
         <EpisodesPanel podcastId={item.id} isOwner={isOwner} />
       )}
 
-      {/* Public notes — visible to everyone */}
+      {/* Public notes */}
       <div className="mt-8 border-t border-border pt-6">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -315,7 +374,7 @@ export default function ItemDetailPage() {
         )}
       </div>
 
-      {/* Private notes — owner only */}
+      {/* Private notes */}
       {isOwner && (
         <div className="mt-6 border-t border-border pt-6">
           <div className="flex items-center justify-between mb-3">

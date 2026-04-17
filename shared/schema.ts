@@ -27,10 +27,11 @@ export const shelfItems = sqliteTable("shelf_items", {
   coverUrl: text("cover_url").default(""),
   description: text("description").default(""),
   externalId: text("external_id").default(""), // google books id, tmdb id, etc.
-  status: text("status").notNull().default("wishlist"), // 'wishlist' | 'owned' | 'completed'
+  status: text("status").notNull().default("reading_list"), // per-type status values
   genre: text("genre").default(""),
   year: text("year").default(""),
-  rating: integer("rating").default(0), // 0-5
+  rating: integer("rating").default(0), // kept for legacy
+  tier: text("tier").default(""), // S | A | B | C | D
   notes: text("notes").default(""),         // private notes
   publicNotes: text("public_notes").default(""), // public notes visible to anyone
   addedAt: integer("added_at").notNull().$defaultFn(() => Date.now()),

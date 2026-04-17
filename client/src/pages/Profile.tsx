@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Mic2, Film, UserPlus, UserCheck, Share2 } from "lucide-react";
+import { BookOpen, Mic2, Film, UserPlus, UserCheck, Share2, LayoutGrid } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { ShelfItem } from "@shared/schema";
+import { TierBoard } from "../components/TierBoard";
 
 const TYPES = [
   { value: "all", label: "All" },
@@ -25,6 +26,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [activeType, setActiveType] = useState("all");
+  const [tierView, setTierView] = useState(false);
+  const [tierType, setTierType] = useState("book");
 
   const { data: profile, isLoading: loadingProfile } = useQuery<any>({
     queryKey: ["/api/users", username],
@@ -159,26 +162,77 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Type tabs */}
-      <Tabs value={activeType} onValueChange={setActiveType} className="mb-6">
-        <TabsList className="bg-muted/50">
-          {TYPES.map(t => (
-            <TabsTrigger key={t.value} value={t.value} className="gap-1.5 text-xs" data-testid={`tab-${t.value}`}>
-              {t.icon && <t.icon className="w-3.5 h-3.5" />}
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {/* View toggle */}
+      <div className="flex items-center gap-2 mb-5">
+        <div className="flex items-center bg-muted/50 rounded-lg p-0.5 gap-0.5">
+          <button
+            type="button"
+            onClick={() => setTierView(false)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              !tierView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Shelf
+          </button>
+          <button
+            type="button"
+            onClick={() => setTierView(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              tierView ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Tier Board
+          </button>
+        </div>
+      </div>
 
-      {/* Shelf grid — public view */}
-      <ShelfGrid
-        items={items || []}
-        loading={loadingItems}
-        emptyMessage={isOwnProfile ? "Your shelf is empty." : `${profile.displayName || profile.username}'s shelf is empty.`}
-        showAddButton={isOwnProfile}
-        linkPrefix={isOwnProfile ? "/shelf/item" : undefined}
-      />
+      {tierView ? (
+        <div className="space-y-4">
+          {/* Tier board type selector */}
+          <div className="flex items-center gap-1.5">
+            {([{value: "book", label: "Books"}, {value: "movie", label: "Movies"}, {value: "podcast", label: "Podcasts"}]).map(t => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTierType(t.value)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-all ${
+                  tierType === t.value ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <TierBoard
+            items={(items || []).filter(i => i.type === tierType)}
+            isOwner={false}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Type tabs */}
+          <Tabs value={activeType} onValueChange={setActiveType} className="mb-6">
+            <TabsList className="bg-muted/50">
+              {TYPES.map(t => (
+                <TabsTrigger key={t.value} value={t.value} className="gap-1.5 text-xs" data-testid={`tab-${t.value}`}>
+                  {t.icon && <t.icon className="w-3.5 h-3.5" />}
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          {/* Shelf grid */}
+          <ShelfGrid
+            items={items || []}
+            loading={loadingItems}
+            emptyMessage={isOwnProfile ? "Your shelf is empty." : `${profile.displayName || profile.username}'s shelf is empty.`}
+            showAddButton={isOwnProfile}
+            linkPrefix={isOwnProfile ? "/shelf/item" : undefined}
+          />
+        </>
+      )}
     </div>
   );
 }
