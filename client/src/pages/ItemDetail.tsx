@@ -29,6 +29,8 @@ export default function ItemDetailPage() {
   const [recOpen, setRecOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [editingNotes, setEditingNotes] = useState(false);
+  const [publicNotes, setPublicNotes] = useState("");
+  const [editingPublicNotes, setEditingPublicNotes] = useState(false);
 
   const { data: item, isLoading } = useQuery<ShelfItem>({
     queryKey: ["/api/shelf/item", id],
@@ -112,6 +114,12 @@ export default function ItemDetailPage() {
     updateMutation.mutate({ notes });
     setEditingNotes(false);
     toast({ title: "Notes saved" });
+  };
+
+  const savePublicNotes = () => {
+    updateMutation.mutate({ publicNotes });
+    setEditingPublicNotes(false);
+    toast({ title: "Public note saved" });
   };
 
   return (
@@ -270,11 +278,51 @@ export default function ItemDetailPage() {
         <EpisodesPanel podcastId={item.id} isOwner={isOwner} />
       )}
 
-      {/* Notes section */}
+      {/* Public notes — visible to everyone */}
+      <div className="mt-8 border-t border-border pt-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <Label className="text-sm font-medium">Public note</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">Visible to anyone who views this item</p>
+          </div>
+          {isOwner && (
+            !editingPublicNotes ? (
+              <Button variant="ghost" size="sm"
+                onClick={() => { setPublicNotes((item as any).publicNotes || ""); setEditingPublicNotes(true); }}
+                data-testid="button-edit-public-notes">
+                {(item as any).publicNotes ? "Edit" : "Add public note"}
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setEditingPublicNotes(false)}>Cancel</Button>
+                <Button size="sm" onClick={savePublicNotes} data-testid="button-save-public-notes">Save</Button>
+              </div>
+            )
+          )}
+        </div>
+        {isOwner && editingPublicNotes ? (
+          <textarea
+            className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Share your thoughts publicly — recommendations, favourite quotes, why others should check this out…"
+            value={publicNotes}
+            onChange={e => setPublicNotes(e.target.value)}
+            data-testid="textarea-public-notes"
+          />
+        ) : (item as any).publicNotes ? (
+          <p className="text-sm text-foreground/80 whitespace-pre-wrap">{(item as any).publicNotes}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">{isOwner ? "No public note yet." : "No public note from the owner."}</p>
+        )}
+      </div>
+
+      {/* Private notes — owner only */}
       {isOwner && (
-        <div className="mt-8 border-t border-border pt-6">
+        <div className="mt-6 border-t border-border pt-6">
           <div className="flex items-center justify-between mb-3">
-            <Label className="text-sm font-medium">Private notes</Label>
+            <div>
+              <Label className="text-sm font-medium">Private notes</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Only you can see this</p>
+            </div>
             {!editingNotes ? (
               <Button variant="ghost" size="sm" onClick={() => { setNotes(item.notes || ""); setEditingNotes(true); }}
                 data-testid="button-edit-notes">
@@ -289,8 +337,8 @@ export default function ItemDetailPage() {
           </div>
           {editingNotes ? (
             <textarea
-              className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Jot down your thoughts, favorite quotes, or why you want to read/watch/listen to this…"
+              className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Private thoughts, quotes, reminders — only you can see this…"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               data-testid="textarea-notes"
@@ -298,7 +346,7 @@ export default function ItemDetailPage() {
           ) : item.notes ? (
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.notes}</p>
           ) : (
-            <p className="text-sm text-muted-foreground italic">No notes yet.</p>
+            <p className="text-sm text-muted-foreground italic">No private notes yet.</p>
           )}
         </div>
       )}

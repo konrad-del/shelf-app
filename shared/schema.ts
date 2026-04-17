@@ -31,7 +31,8 @@ export const shelfItems = sqliteTable("shelf_items", {
   genre: text("genre").default(""),
   year: text("year").default(""),
   rating: integer("rating").default(0), // 0-5
-  notes: text("notes").default(""),
+  notes: text("notes").default(""),         // private notes
+  publicNotes: text("public_notes").default(""), // public notes visible to anyone
   addedAt: integer("added_at").notNull().$defaultFn(() => Date.now()),
 });
 

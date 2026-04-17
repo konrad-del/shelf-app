@@ -231,6 +231,24 @@ export function registerRoutes(httpServer: Server, app: Express) {
     })));
   });
 
+  // Feed: items from people you follow
+  app.get("/api/feed", requireAuth, (req, res) => {
+    const me = req.user as any;
+    const items = storage.getFollowingFeed(me.id, 40);
+    res.json(items);
+  });
+
+  // Top rated from people you follow
+  app.get("/api/feed/top-rated", requireAuth, (req, res) => {
+    const me = req.user as any;
+    const items = storage.getFollowingFeed(me.id, 100);
+    const topRated = items
+      .filter(i => (i.rating || 0) >= 4)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 20);
+    res.json(topRated);
+  });
+
   // Get single shelf item by ID (public)
   app.get("/api/shelf-item/:id", (req, res) => {
     const item = storage.getShelfItemById(Number(req.params.id));

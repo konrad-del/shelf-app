@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { eq, and, desc, like, or } from "drizzle-orm";
+import { eq, and, desc, like, or, inArray } from "drizzle-orm";
 import {
   users, shelfItems, follows, recommendations, podcastEpisodes,
   type User, type InsertUser,
@@ -69,6 +69,9 @@ sqlite.exec(`
   );
 `);
 
+// Migrations for columns added after initial schema
+try { sqlite.exec(`ALTER TABLE shelf_items ADD COLUMN public_notes TEXT DEFAULT ''`); } catch {}
+
 export interface IStorage {
   // Users
   createUser(data: InsertUser): User;
@@ -102,6 +105,9 @@ export interface IStorage {
   createRecommendation(data: InsertRecommendation): Recommendation;
   getRecommendationsForUser(userId: number): (Recommendation & { fromUser: User; item: ShelfItem })[];
   getRecommendationsFromUser(userId: number): (Recommendation & { toUser: User; item: ShelfItem })[];
+
+  // Feed
+  getFollowingFeed(userId: number, limit?: number): (ShelfItem & { user: Omit<User, 'passwordHash'> })[]; 
 }
 
 export class SqliteStorage implements IStorage {
@@ -237,6 +243,22 @@ export class SqliteStorage implements IStorage {
 
   deleteEpisode(id: number): void {
     db.delete(podcastEpisodes).where(eq(podcastEpisodes.id, id)).run();
+  }
+
+  getFollowingFeed(userId: number, limit = 30): (ShelfItem & { user: Omit<User, 'passwordHash'> })[] {
+    const followingRows = db.select().from(follows).where(eq(follows.followerId, userId)).all();
+    const followingIds = followingRows.map(f => f.followingId);
+    if (followingIds.length === 0) return [];
+    const items = db.select().from(shelfItems)
+      .where(inArray(shelfItems.userId, followingIds))
+      .orderBy(desc(shelfItems.addedAt))
+      .limit(limit)
+      .all();
+    return items.map(item => {
+      const u = db.select().from(users).where(eq(users.id, item.userId)).get()!;
+      const { passwordHash, ...safeUser } = u;
+      return { ...item, user: safeUser };
+    }).filter(i => i.user);
   }
 }
 
