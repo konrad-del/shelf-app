@@ -7,7 +7,6 @@ import { apiRequest } from "../lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, Mic2, Film, Search, Plus, ArrowLeft, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -97,19 +96,22 @@ export default function AddItemPage() {
       <p className="text-muted-foreground text-sm mb-6">Search for a book, podcast, or movie to add.</p>
 
       {/* Type selector */}
-      <Tabs value={type} onValueChange={(v) => { setType(v as ItemType); setActiveType(v as ItemType); setSearchTriggered(""); setSelected(null); }} className="mb-5">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="book" className="gap-1.5" data-testid="tab-book">
-            <BookOpen className="w-4 h-4" /> Books
-          </TabsTrigger>
-          <TabsTrigger value="podcast" className="gap-1.5" data-testid="tab-podcast">
-            <Mic2 className="w-4 h-4" /> Podcasts
-          </TabsTrigger>
-          <TabsTrigger value="movie" className="gap-1.5" data-testid="tab-movie">
-            <Film className="w-4 h-4" /> Movies & TV
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center bg-muted/50 rounded-lg p-0.5 gap-0.5 mb-5 w-fit">
+        {([{value: "book", label: "Books", icon: BookOpen}, {value: "podcast", label: "Podcasts", icon: Mic2}, {value: "movie", label: "Movies & TV", icon: Film}] as const).map(({ value: v, label, icon: Icon }) => (
+          <button
+            key={v}
+            type="button"
+            data-testid={`tab-${v}`}
+            onClick={() => { setType(v); setActiveType(v); setSearchTriggered(""); setSelected(null); setQuery(""); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+              type === v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Search */}
       {!selected && (

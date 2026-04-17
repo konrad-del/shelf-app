@@ -34,10 +34,8 @@ export function Navbar() {
 
   const handleTypeSelect = (type: ShelfType) => {
     setActiveType(type);
-    // If not already on shelf or home, go to shelf
-    if (!location.startsWith("/shelf") && location !== "/") {
-      setLocation("/shelf");
-    }
+    // Always navigate to shelf when switching type
+    setLocation("/shelf");
   };
 
   return (

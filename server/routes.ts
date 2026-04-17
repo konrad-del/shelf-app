@@ -281,7 +281,13 @@ export function registerRoutes(httpServer: Server, app: Express) {
     const q = String(req.query.q || "").trim();
     if (!q) return res.json([]);
     try {
-      const resp = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=key,title,author_name,cover_i,first_publish_year,subject`);
+      const resp = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=key,title,author_name,cover_i,first_publish_year,subject`, {
+        headers: { "User-Agent": "ShelfApp/1.0 (konrad@chefmade.dk)" },
+      });
+      if (!resp.ok) {
+        console.error("Open Library error:", resp.status, await resp.text());
+        return res.json([]);
+      }
       const data = await resp.json() as any;
       const results = (data.docs || []).map((d: any) => ({
         externalId: d.key,
@@ -293,7 +299,8 @@ export function registerRoutes(httpServer: Server, app: Express) {
         type: "book",
       }));
       res.json(results);
-    } catch {
+    } catch (e) {
+      console.error("Book search failed:", e);
       res.json([]);
     }
   });
